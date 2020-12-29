@@ -77,17 +77,17 @@ mira <- with(dat_i, glm(death ~ age,  family = binomial))
 result <- summary(pool(mira))
 print(result[, 1:5])
 ##Model diagnostics
-imp.wbc <- data.frame(dat_i$imp$wbc)
-imp.wbc.long <- reshape(imp.wbc,
+imp.hr <- data.frame(dat_i$imp$hr)
+imp.hr.long <- reshape(imp.hr,
                         varying = list(c(paste0("X", 1:100))),
                         direction = "long",
-                        v.names = "wbc",
+                        v.names = "hr",
                         times = 1:100,
                         timevar = "IMP",
                         idvar = "id")
-sub <- subset(imp.wbc.long, imp.wbc.long$IMP <= 20)
-boxplot(wbc  ~  IMP, sub, xlab = "Imputation number", ylab = "WBC", pch = 20, col = "gray80")
-hist(sub$wbc, col = gray(0.1, alpha = 0.5), freq = FALSE, xlab = "Distribution of WBC", main = "")
-hist(imp.wbc.long$wbc, col = gray(0.8, alpha = 0.5), freq = FALSE, add = TRUE)
+sub <- subset(imp.hr.long, imp.hr.long$IMP <= 20)
+boxplot(hr  ~  IMP, sub, xlab = "Imputation number", ylab = "Heart rate", pch = 20, col = "gray80")
+hist(sub$hr, col = gray(0.1, alpha = 0.5), freq = FALSE, xlab = "Distribution of heart rate", main = "")
+hist(imp.hr.long$hr, col = gray(0.8, alpha = 0.5), freq = FALSE, add = TRUE)
 legend("topright", legend = c("observed", "imputed"), fill = c(gray(0.1, alpha = 0.5), gray(0.8, alpha = 0.5)))
 
