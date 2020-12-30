@@ -11,7 +11,7 @@ download.file(url = url, destfile = pkgFile)
 install.packages(pkgs=pkgFile, type="source", repos=NULL)
 library(norm2)
 #Read the sample file
-dat <- read_csv("C:/Users/akihi/Downloads/Sample_data.csv",
+dat <- read_csv("C:/Users/akihi/Downloads/MissingDataLecture/Sample_data.csv",
                 locale = locale(encoding = "SHIFT-JIS"),
                 col_types = cols(
                   id = col_double(),
@@ -22,7 +22,6 @@ dat <- read_csv("C:/Users/akihi/Downloads/Sample_data.csv",
                   sbp = col_double(),
                   dbp = col_double(),
                   bun = col_double(),
-                  rr = col_double(),
                   ams = col_factor(),
                   hr = col_double(),
                   death = col_factor(),
@@ -33,6 +32,9 @@ dat <- read_csv("C:/Users/akihi/Downloads/Sample_data.csv",
                 na = "NA") #Look at the errors
 dat %>% glimpse()
 md.pattern(dat)
+#MCAR: The missing patterns are independent of other variables in the design and the observed and unobserved values of the variable itself
+#MAR: Its missing patterns relate to other variables in the data set but not to the variable itself.
+#MNAR: Missing patterns that depend on the unobserved values of the variable
 ############################################################################################################################
 #1. Generate m complete data sets.(mice -> mids {a multiply imputed data set})                                            ##
 #2. Analyze separately using any standard complete-data technique. (with -> mira {a multiple imputed repeated analysis})  ##
@@ -44,6 +46,7 @@ md.pattern(dat)
 dat1 <- mice(dat, maxit = 0)
 dat1$method
 dat1$predictorMatrix
+#Look! You have to remove "id".
 dat2 <- mice(dat, m = 10, maxit = 20, printFlag = FALSE, seed = 1234) #maxit 20 is enough.
 #Spaghetti plot
 #Check intermingled spaghetti
@@ -72,7 +75,7 @@ print(miinf)
 exp(miinf$est)
 exp(miinf$std.err)
 #Using with & pool
-#Dy default, correct for small samples
+#By default, correct for small samples
 mira <- with(dat_i, glm(death ~ age,  family = binomial))
 result <- summary(pool(mira))
 print(result[, 1:5])
