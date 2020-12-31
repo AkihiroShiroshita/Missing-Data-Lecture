@@ -9,6 +9,9 @@ library(survey)
 library(lattice)
 library(twang)
 library(mice)
+library(MatchIt)
+library(Matching)
+library(rbounds)
 dat <- read_csv("C:/Users/akihi/Downloads/MissingDataLecture/Sample_data2.csv",
                 locale = locale(encoding = "SHIFT-JIS"),
                 col_types = cols(
@@ -162,14 +165,63 @@ Yt0 <- predict(modelC,newdata=data.frame(pScores=with(comp,pScores[steroid==1]))
                vcov=TRUE, type="response")
 diff <- Yt1 - Yt0
 ATTdr <- svycontrast(diff, contrasts=rep(1/length(diff),length(diff)))
-#Stratification
+#PS Matching
+psModel <- glm(psFormula, comp, family=binomial())
+comp$logitPScores <- log(fitted(psModel)/(1-fitted(psModel)))
+greedyMatching <- matchit(psFormula,
+                          distance=comp$logitPScores,
+                          m.order="largest",
+                          data = comp,
+                          method = "nearest",
+                          ratio=1,
+                          replace=T,
+                          caliper=0.25)
+#Factor -> Character -> Numeric -> Logical
+glimpse(comp)
+comp_m <- comp %>%
+  mutate(steroid = as.character(steroid)) %>%
+  mutate(steroid = as.numeric(steroid)) %>%
+  mutate(steroid = as.logical(steroid))
+#If there are some typos, the following code won't work.
+greedyMatching2 <- with(comp_m,
+                        Match(Y=hospitalterm,
+                              Tr=steroid,
+                              X=logitPScores,
+                              estimand = "ATT",
+                              M = 1,
+                              caliper = 0.25,
+                              replace=TRUE,
+                              ties=TRUE))
+#Optimal matching
+optimalMatching <- matchit(psFormula,
+                           distance=comp$logitPScores,
+                           data = comp,
+                           method = "optimal",
+                           ratio=1)
+#Full matching
+fullMatching <- matchit(psFormula,
+                        distance=comp$logitPScores,
+                        data = comp,
+                        method = "full")
+#Balance check
+balance.greedyMatching <- summary(greedyMatching, standardize=T)
+balance.greedyMatching
+#Estimate
+#For "matching"
+summary(greedyMatching2)
+#For "MatchIt
+data.greedyMatching <- match.data(greedyMatching)
+design.greedyMatching <- svydesign(ids=~id,
+                                   data=data.greedyMatching)
 
-
-
-
-
-
-
+model.geneticMatching <- svyglm(hospitalterm ~ steroid,
+                                design.greedyMatching,
+                                family=gaussian())
+summary(model.geneticMatching)
+#Sensitivity analysis
+#For "matching"
+#Now "rbounds" handles only one-to-one and fixed ratio matching
+psens(greedyMatching2, Gamma=3, GammaInc=0.1)
 
 
 
