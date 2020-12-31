@@ -8,6 +8,7 @@ library(mitools)
 library(survey)
 library(lattice)
 library(twang)
+library(mice)
 dat <- read_csv("C:/Users/akihi/Downloads/MissingDataLecture/Sample_data2.csv",
                 locale = locale(encoding = "SHIFT-JIS"),
                 col_types = cols(
@@ -119,17 +120,23 @@ surveyDesignLS <- svydesign(ids=~id,
                             weights=~weightATETruncated,
                             data = comp,
                             nest=T)
-surveyDesignLSBoot <- as.svrepdesign(surveyDesignDeath, type=c("bootstrap"), replicates=1000)
+surveyDesignLSBoot <- as.svrepdesign(surveyDesignLS, type=c("bootstrap"), replicates=1000)
 weightedMeans <- svyby(formula=~hospitalterm,
                         by=~steroid,
                         surveyDesignLSBoot,
                         FUN=svymean,
                         covmat=TRUE)
 weightedMeans
+weightedVars <- svyby(formula=~hospitalterm,
+                      by=~steroid,
+                      design=surveyDesignLSBoot,
+                      FUN=svyvar,
+                      covmat=TRUE)
+weightedVars
 Effect <- svycontrast(weightedMeans, contrasts=c(-1,1))
 Effect
 #Weighted least squares
-outcomeModel <- svyglm(hospitalterm~steroid,surveyDesignLS)
+outcomeModel <- svyglm(hospitalterm ~ steroid, surveyDesignLS)
 summary(outcomeModel)
 #However, is the method described so far truly correct?
 allimputations <- update(allimputations,
@@ -142,6 +149,21 @@ surveyDesignMI <- svydesign(ids=~id,
 outcomeModelMI <- with(surveyDesignMI, svyglm(hospitalterm~steroid))
 resultsModelMI <- MIcombine(outcomeModelMI)
 summary(resultsModelMI)
+#Doubly robust estimation
+#Add PS to the data
+surveyDesignT <- subset(surveyDesignLSBoot, steroid==1)
+surveyDesignC <- subset(surveyDesignLSBoot, steroid==0)
+modelT <- svyglm(hospitalterm ~ pScores+I(pScores^2)+I(pScores^3), surveyDesignT)
+modelU <- svyglm(hospitalterm ~ pScores+I(pScores^2)+I(pScores^3), surveyDesignC)
+Yt1 <- predict(modelT,
+               newdata=data.frame(pScores=with(comp,pScores[steroid==1])),
+               vcov=TRUE, type="response")
+Yt0 <- predict(modelC,newdata=data.frame(pScores=with(comp,pScores[steroid==1])),
+               vcov=TRUE, type="response")
+diff <- Yt1 - Yt0
+ATTdr <- svycontrast(diff, contrasts=rep(1/length(diff),length(diff)))
+#Stratification
+
 
 
 
