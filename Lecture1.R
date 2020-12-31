@@ -22,7 +22,7 @@ dat <- read_csv("C:/Users/akihi/Downloads/MissingDataLecture/Sample_data.csv",
                   sbp = col_double(),
                   dbp = col_double(),
                   bun = col_double(),
-                  ams = col_factor(),
+                  ams = col_logical(),
                   hr = col_double(),
                   death = col_factor(),
                   adl = col_factor(),
@@ -88,9 +88,10 @@ imp.hr.long <- reshape(imp.hr,
                         times = 1:100,
                         timevar = "IMP",
                         idvar = "id")
-sub <- subset(imp.hr.long, imp.hr.long$IMP <= 20)
+sub <- subset(imp.hr.long, imp.hr.long$IMP <= 5)
 boxplot(hr  ~  IMP, sub, xlab = "Imputation number", ylab = "Heart rate", pch = 20, col = "gray80")
 hist(sub$hr, col = gray(0.1, alpha = 0.5), freq = FALSE, xlab = "Distribution of heart rate", main = "")
 hist(imp.hr.long$hr, col = gray(0.8, alpha = 0.5), freq = FALSE, add = TRUE)
 legend("topright", legend = c("observed", "imputed"), fill = c(gray(0.1, alpha = 0.5), gray(0.8, alpha = 0.5)))
+
 

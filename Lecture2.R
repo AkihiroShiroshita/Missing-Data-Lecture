@@ -12,6 +12,7 @@ library(mice)
 library(MatchIt)
 library(Matching)
 library(rbounds)
+library(lme4)
 dat <- read_csv("C:/Users/akihi/Downloads/MissingDataLecture/Sample_data2.csv",
                 locale = locale(encoding = "SHIFT-JIS"),
                 col_types = cols(
@@ -32,12 +33,14 @@ dat <- read_csv("C:/Users/akihi/Downloads/MissingDataLecture/Sample_data2.csv",
                 ),
                 guess_max = 1500, #default: 1000
                 na = "NA")
+dat$hospitalterm <- log(dat$hospitalterm)
 dat %>% glimpse()
 #dat <- dat %>%
 #  na.omit()
 long.imputation <- c()
 predictor.selection <- quickpred(dat,
                                  exclude=c("id"))
+#Why is predictor.matrix wrong?
 imputation <- mice(dat,
                    m=5,
                    predictorMatrix = predictor.selection)
@@ -61,12 +64,15 @@ Names <- colnames(dat)
 psFormula <- paste(Names, collapse="+")
 psFormula <- formula(paste("steroid~",psFormula, sep=""))
 print(psFormula)
+#Remove outcome!
 surveyDesign1 <- svydesign(ids=~id,
                            strata=~hospital,
+                           weights=~1,
                            data = imputation1,
                            nest=T)
 surveyDesignAll <- svydesign(ids=~id,
                              strata=~hospital,
+                             weights=~1,
                              data = allimputations,
                              nest=T)
 psModel1 <- svyglm(psFormula,
@@ -77,6 +83,7 @@ imputation1$pScores <- pScores
 psModelAll <- with(surveyDesignAll, svyglm(psFormula, family=binomial))
 pScoresAll <- sapply(psModelAll, fitted)
 pScores <- apply(pScoresAll,1,mean)
+#It that true?
 allimputations <- update(allimputations, pScores = pScores)
 #common support
 comp <- complete(imputation, action="long")
@@ -102,6 +109,7 @@ with(comp, by(weightATETruncated,steroid,summary))
 comp$C <- with(comp,ifelse(steroid==1,pScores,1-pScores))
 surveyDesign <- svydesign(ids=~id,
                           strata=~hospital,
+                          weights=~1,
                           data = comp,
                           nest=T)
 constants <- svyby(~C, by=~steroid, design=surveyDesign, FUN=svymean)
@@ -120,7 +128,7 @@ round(balanceTable,3)
 #Estimating treatment effects
 surveyDesignLS <- svydesign(ids=~id,
                             strata=~hospital,
-                            weights=~weightATETruncated,
+                            weights=~1,
                             data = comp,
                             nest=T)
 surveyDesignLSBoot <- as.svrepdesign(surveyDesignLS, type=c("bootstrap"), replicates=1000)
@@ -222,9 +230,13 @@ summary(model.geneticMatching)
 #For "matching"
 #Now "rbounds" handles only one-to-one and fixed ratio matching
 psens(greedyMatching2, Gamma=3, GammaInc=0.1)
-
-
-
+#However, is the above code suitable for multilevel data?
+#Cluster-robust method
+ps.model <- glmer(formula = steroid ~ age + gender + sbp + dbp + ams + hr + adl + (1|id) + (1|hospital),
+                  family = binomial,
+                  data = comp)
+comp$ps <- fitted(ps.model)
+with(comp, by(ps, steroid, summary))
 
 
 
