@@ -46,6 +46,9 @@ md.pattern(dat)
 dat1 <- mice(dat, maxit = 0)
 dat1$method
 dat1$predictorMatrix
+predmt1 <- (1 - diag(1, ncol(dat)))
+predmt1[c(1,2),] <- predmt1[,c(1,2)] <- 0
+predmt1
 #Look! You have to remove "id".
 dat2 <- mice(dat, m = 10, maxit = 20, printFlag = FALSE, seed = 1234) #maxit 20 is enough.
 #Spaghetti plot

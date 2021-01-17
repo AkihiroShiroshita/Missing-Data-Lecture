@@ -36,6 +36,7 @@ dat %>% glimpse()
 #dat <- dat %>%
 #  na.omit()
 long.imputation <- c()
+predictor.selection <- quickpred(dat)
 predictor.selection <- quickpred(dat,
                                  exclude=c("id"))
 imputation <- mice(dat,
